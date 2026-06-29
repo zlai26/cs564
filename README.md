@@ -1,1 +1,2 @@
-# cs564
+# COMPSCI 564 Project
+
