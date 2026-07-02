@@ -53,6 +53,7 @@ class AddressRow:
 @dataclass(frozen=True)
 class ListingRow:
     listing_id: int
+    address_id: int
     title: str
     description: str
     bedrooms: int
@@ -301,7 +302,7 @@ def build_listing_tables(
     raw_dir: Path, city_state_ids: dict[tuple[str, str], int], time_shift: timedelta
 ) -> tuple[
     list[tuple[int, str, str, str, int]],
-    list[tuple[int, str, str, int, str, str, str, str, str, str]],
+    list[tuple[int, int, str, str, int, str, str, str, str, str, str]],
     list[tuple[int, str]],
     list[tuple[int, int]],
     dict[str, int],
@@ -331,7 +332,7 @@ def build_listing_tables(
 
         city_state_id = city_state_ids.get((city, state))
         if city_state_id is None:
-            raise ValueError(f"No CityStateID found for listing city/state: {city}, {state}")
+            raise ValueError(f"No city_state_id found for listing city/state: {city}, {state}")
 
         raw_zip = extract_zip(row.get("body"))
         zip_code = choose_zip(row, city, state, first_zip_by_city_state, all_zips, first_zip)
@@ -367,10 +368,12 @@ def build_listing_tables(
         address = AddressRow(street_number, street_name, zip_code, city_state_id)
         if address not in addresses:
             addresses[address] = len(addresses) + 1
+        address_id = addresses[address]
 
         listing_id = len(listings) + 1
         listing = ListingRow(
             listing_id=listing_id,
+            address_id=address_id,
             title=title,
             description=clean(row.get("body")),
             bedrooms=bedrooms,
@@ -404,6 +407,7 @@ def build_listing_tables(
     listing_rows = [
         (
             row.listing_id,
+            row.address_id,
             row.title,
             row.description,
             row.bedrooms,
@@ -439,43 +443,44 @@ def process(raw_dir: Path, import_dir: Path, target_max_date: date) -> dict[str,
     counts = {
         "CityState": write_csv(
             import_dir / "CityState.csv",
-            ["CityStateID", "City", "State"],
+            ["city_state_id", "city", "state"],
             city_state_rows,
         ),
         "CityDemographics": write_csv(
             import_dir / "CityDemographics.csv",
-            ["CityStateID", "Zip", "Population", "Latitude", "Longitude"],
+            ["city_state_id", "zip", "population", "latitude", "longitude"],
             demographics_rows,
         ),
         "Address": write_csv(
             import_dir / "Address.csv",
-            ["AddressID", "StreetNumber", "StreetName", "Zip", "CityStateID"],
+            ["address_id", "street_number", "street_name", "zip", "city_state_id"],
             address_rows,
         ),
         "ApartmentListing": write_csv(
             import_dir / "ApartmentListing.csv",
             [
-                "ListingID",
-                "Title",
-                "Description",
-                "Bedrooms",
-                "Price",
-                "Bathrooms",
-                "SquareFeet",
-                "TimePosted",
-                "Latitude",
-                "Longitude",
+                "listing_id",
+                "address_id",
+                "title",
+                "description",
+                "bedrooms",
+                "price",
+                "bathrooms",
+                "square_feet",
+                "listing_time",
+                "latitude",
+                "longitude",
             ],
             listing_rows,
         ),
         "Amenity": write_csv(
             import_dir / "Amenity.csv",
-            ["AmenityID", "AmenityName"],
+            ["amenity_id", "amenity_name"],
             amenity_rows,
         ),
         "ListingAmenity": write_csv(
             import_dir / "ListingAmenity.csv",
-            ["ListingID", "AmenityID"],
+            ["listing_id", "amenity_id"],
             listing_amenity_rows,
         ),
     }

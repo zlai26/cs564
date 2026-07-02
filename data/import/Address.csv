@@ -1,4 +1,4 @@
-AddressID,StreetNumber,StreetName,Zip,CityStateID
+address_id,street_number,street_name,zip,city_state_id
 1,507 509,Esplanade,90277,2472
 2,146,Lochview Dr,23602,25700
 3,3101,Morningside Dr,27607,14703

@@ -1,4 +1,4 @@
-CityStateID,Zip,Population,Latitude,Longitude
+city_state_id,zip,population,latitude,longitude
 22159,00601,16669,18.18027,-66.75266
 22160,00602,37233,18.36075,-67.17541
 22161,00603,48448,18.45744,-67.12225

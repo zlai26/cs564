@@ -21,7 +21,7 @@ different latest listing date:
 python scripts/raw_data_processor.py --target-max-date 2026-07-28
 ```
 
-Generated files:
+Generated files that are ready for MySQL import are under `data/import/`:
 
 - `CityState.csv`
 - `CityDemographics.csv`
