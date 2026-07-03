@@ -6,17 +6,17 @@ CityState(city_state_id, city, state)
 - Candidate keys: city_state_id; (city, state)
 - Foreign keys: none
 
-CityDemographics(city_state_id, zip, population, latitude, longitude)
+ZipCodeDemographics(zip, population, latitude, longitude)
 
 - Primary key: zip
 - Candidate keys: zip
-- Foreign keys: city_state_id references CityState(city_state_id)
+- Foreign keys: none
 
 Address(address_id, street_number, street_name, zip, city_state_id)
 
 - Primary key: address_id
 - Candidate keys: address_id; (street_number, street_name, zip, city_state_id)
-- Foreign keys: zip references CityDemographics(zip); city_state_id references CityState(city_state_id)
+- Foreign keys: zip references ZipCodeDemographics(zip); city_state_id references CityState(city_state_id)
 
 ApartmentListing(listing_id, address_id, title, description, bedrooms, price, bathrooms, square_feet, listing_time, latitude, longitude)
 

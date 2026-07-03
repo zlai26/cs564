@@ -24,7 +24,7 @@ python scripts/raw_data_processor.py --target-max-date 2026-07-28
 Generated files that are ready for MySQL import are under `data/import/`:
 
 - `CityState.csv`
-- `CityDemographics.csv`
+- `ZipCodeDemographics.csv`
 - `Address.csv`
 - `ApartmentListing.csv`
 - `Amenity.csv`
@@ -40,13 +40,18 @@ Processing notes:
   city/state.
 - Missing addresses are replaced with deterministic placeholder addresses.
 - Missing numeric values that can cause MySQL import trouble are filled with `0`.
-- `CityDemographics` uses ZIP, population, latitude, and longitude from
+- `ZipCodeDemographics` uses ZIP, population, latitude, and longitude from
   `uszips.csv`.
+
+## Table Creation
+
+Copy and paste the contents of `create_tables.sql` into the MySQL command line
+or MySQL Workbench before importing the CSV files.
 
 Recommended MySQL import order:
 
 1. `CityState`
-2. `CityDemographics`
+2. `ZipCodeDemographics`
 3. `Address`
 4. `ApartmentListing`
 5. `Amenity`

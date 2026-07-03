@@ -224,22 +224,17 @@ def build_city_state(raw_dir: Path) -> tuple[dict[tuple[str, str], int], list[tu
     return city_state_ids, rows
 
 
-def build_demographics(
-    raw_dir: Path, city_state_ids: dict[tuple[str, str], int]
-) -> list[tuple[int, str, str, str, str]]:
-    rows: OrderedDict[str, tuple[int, str, str, str, str]] = OrderedDict()
+def build_demographics(raw_dir: Path) -> list[tuple[str, str, str, str]]:
+    rows: OrderedDict[str, tuple[str, str, str, str]] = OrderedDict()
 
     for row in csv_reader(raw_dir / "uszips.csv"):
         zip_code = clean(row.get("zip")).zfill(5)
-        city = clean(row.get("city"))
-        state = clean(row.get("state_id")).upper()
         population = parse_int(row.get("population"))
         latitude = parse_decimal(row.get("lat")) or "0"
         longitude = parse_decimal(row.get("lng")) or "0"
-        city_state_id = city_state_ids.get((city, state))
-        if not zip_code or city_state_id is None:
+        if not zip_code:
             continue
-        rows[zip_code] = (city_state_id, zip_code, population or 0, latitude, longitude)
+        rows[zip_code] = (zip_code, population or 0, latitude, longitude)
 
     return list(rows.values())
 
@@ -428,17 +423,17 @@ def process(raw_dir: Path, import_dir: Path, target_max_date: date) -> dict[str,
     import_dir.mkdir(parents=True, exist_ok=True)
 
     city_state_ids, city_state_rows = build_city_state(raw_dir)
-    demographics_rows = build_demographics(raw_dir, city_state_ids)
+    demographics_rows = build_demographics(raw_dir)
     time_shift = build_time_shift(raw_dir, target_max_date)
     address_rows, listing_rows, amenity_rows, listing_amenity_rows, stats = build_listing_tables(
         raw_dir, city_state_ids, time_shift
     )
-    demographic_zips = {row[1] for row in demographics_rows}
-    for _address_id, _street_number, _street_name, zip_code, city_state_id in address_rows:
+    demographic_zips = {row[0] for row in demographics_rows}
+    for _address_id, _street_number, _street_name, zip_code, _city_state_id in address_rows:
         if zip_code not in demographic_zips:
-            demographics_rows.append((city_state_id, zip_code, 0, 0, 0))
+            demographics_rows.append((zip_code, 0, 0, 0))
             demographic_zips.add(zip_code)
-    demographics_rows.sort(key=lambda row: row[1])
+    demographics_rows.sort(key=lambda row: row[0])
 
     counts = {
         "CityState": write_csv(
@@ -446,9 +441,9 @@ def process(raw_dir: Path, import_dir: Path, target_max_date: date) -> dict[str,
             ["city_state_id", "city", "state"],
             city_state_rows,
         ),
-        "CityDemographics": write_csv(
-            import_dir / "CityDemographics.csv",
-            ["city_state_id", "zip", "population", "latitude", "longitude"],
+        "ZipCodeDemographics": write_csv(
+            import_dir / "ZipCodeDemographics.csv",
+            ["zip", "population", "latitude", "longitude"],
             demographics_rows,
         ),
         "Address": write_csv(

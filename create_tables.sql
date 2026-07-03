@@ -6,14 +6,12 @@ CREATE TABLE CityState (
     UNIQUE (city, state)
 );
 
-CREATE TABLE CityDemographics (
-    city_state_id INT NOT NULL,
+CREATE TABLE ZipCodeDemographics (
     zip CHAR(5) NOT NULL,
     population INT NOT NULL DEFAULT 0,
     latitude DECIMAL(9,6) NOT NULL DEFAULT 0,
     longitude DECIMAL(9,6) NOT NULL DEFAULT 0,
     PRIMARY KEY (zip),
-    FOREIGN KEY (city_state_id) REFERENCES CityState(city_state_id),
     CHECK (population >= 0)
 );
 
@@ -25,7 +23,7 @@ CREATE TABLE Address (
     city_state_id INT NOT NULL,
     PRIMARY KEY (address_id),
     UNIQUE (street_number, street_name, zip, city_state_id),
-    FOREIGN KEY (zip) REFERENCES CityDemographics(zip),
+    FOREIGN KEY (zip) REFERENCES ZipCodeDemographics(zip),
     FOREIGN KEY (city_state_id) REFERENCES CityState(city_state_id)
 );
 
