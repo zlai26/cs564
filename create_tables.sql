@@ -70,13 +70,12 @@ CREATE TABLE AppUser (
 );
 
 CREATE TABLE Review (
-    review_id INT NOT NULL,
     user_name VARCHAR(100) NOT NULL,
     listing_id INT NOT NULL,
     rating INT NOT NULL,
     review_text TEXT,
     review_time DATETIME NOT NULL,
-    PRIMARY KEY (review_id),
+    PRIMARY KEY (user_name, listing_id),
     FOREIGN KEY (user_name) REFERENCES AppUser(user_name),
     FOREIGN KEY (listing_id) REFERENCES ApartmentListing(listing_id),
     CHECK (rating BETWEEN 1 AND 5)

@@ -43,10 +43,10 @@ AppUser(user_name, email)
 - Candidate keys: user_name; email
 - Foreign keys: none
 
-Review(review_id, user_name, listing_id, rating, review_text, review_time)
+Review(user_name, listing_id, rating, review_text, review_time)
 
-- Primary key: review_id
-- Candidate keys: review_id
+- Primary key: (user_name, listing_id)
+- Candidate keys: (user_name, listing_id)
 - Foreign keys: user_name references AppUser(user_name); listing_id references ApartmentListing(listing_id)
 
 SavedListing(user_name, listing_id)
