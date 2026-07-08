@@ -38,7 +38,9 @@ Processing notes:
 - Missing listing city/state values reuse the previous valid city/state.
 - Missing ZIP values use the first matching ZIP found in `uszips.csv` for that
   city/state.
-- Missing addresses are replaced with deterministic placeholder addresses.
+- Listings with missing addresses share one placeholder `Address` row with
+  street number `0`, street name `Unknown`, ZIP `00000`, and city/state
+  `Unknown, NA`.
 - Missing numeric values that can cause MySQL import trouble are filled with `0`.
 - `ZipCodeDemographics` uses ZIP, population, latitude, and longitude from
   `uszips.csv`.

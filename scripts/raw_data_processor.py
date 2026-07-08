@@ -15,7 +15,13 @@ from typing import Iterable
 
 
 ZIP_RE = re.compile(r",\s*(\d{3,5})(?:-\d{4})?\s*,\s*([A-Za-z]{2})")
-STREET_RE = re.compile(r"^\s*([0-9][0-9A-Za-z/#&.\-\s]*\d[A-Za-z]?)\s+([A-Za-z].*?)\s*$")
+UNKNOWN_CITY_STATE = ("Unknown", "NA")
+UNKNOWN_ZIP = "00000"
+STREET_RE = re.compile(
+    r"^\s*"
+    r"([0-9]+[A-Za-z]?(?:[-/][0-9A-Za-z]+)?(?:\s+[0-9]+/[0-9]+)?)"
+    r"\s+(.+?)\s*$"
+)
 APARTMENT_HEADERS = [
     "id",
     "category",
@@ -204,7 +210,7 @@ def write_csv(path: Path, headers: list[str], rows: Iterable[Iterable[object]]) 
 
 
 def build_city_state(raw_dir: Path) -> tuple[dict[tuple[str, str], int], list[tuple[int, str, str]]]:
-    pairs: set[tuple[str, str]] = set()
+    pairs: set[tuple[str, str]] = {UNKNOWN_CITY_STATE}
 
     for row in csv_reader(raw_dir / "uszips.csv"):
         city = clean(row.get("city"))
@@ -302,7 +308,9 @@ def build_listing_tables(
     list[tuple[int, int]],
     dict[str, int],
 ]:
-    addresses: OrderedDict[AddressRow, int] = OrderedDict()
+    unknown_city_state_id = city_state_ids[UNKNOWN_CITY_STATE]
+    unknown_address = AddressRow("0", "Unknown", UNKNOWN_ZIP, unknown_city_state_id)
+    addresses: OrderedDict[AddressRow, int] = OrderedDict([(unknown_address, 1)])
     listings: list[ListingRow] = []
     amenity_names: set[str] = set()
     listing_amenity_names: list[tuple[int, str]] = []
@@ -310,7 +318,7 @@ def build_listing_tables(
     stats = {
         "reused_previous_city_state": 0,
         "used_zip_from_uszips": 0,
-        "used_placeholder_address": 0,
+        "missing_address": 0,
         "defaulted_bedrooms": 0,
         "defaulted_price": 0,
     }
@@ -334,13 +342,18 @@ def build_listing_tables(
         if raw_zip != zip_code:
             stats["used_zip_from_uszips"] += 1
 
-        street_number, street_name = split_street(clean(row.get("address")))
-        if not street_name:
-            street_number = clean(row.get("id")) or str(len(listings) + 1)
-            street_name = "Unknown"
-            stats["used_placeholder_address"] += 1
-        if not street_number:
-            street_number = "0"
+        raw_address = clean(row.get("address"))
+        address_id = addresses[unknown_address]
+        if raw_address:
+            street_number, street_name = split_street(raw_address)
+            if not street_number:
+                street_number = "0"
+            address = AddressRow(street_number, street_name, zip_code, city_state_id)
+            if address not in addresses:
+                addresses[address] = len(addresses) + 1
+            address_id = addresses[address]
+        else:
+            stats["missing_address"] += 1
 
         title = clean(row.get("title"))
         if not title:
@@ -359,11 +372,6 @@ def build_listing_tables(
         time_posted = parse_timestamp(row.get("time"), time_shift)
         if not time_posted:
             time_posted = "1970-01-01 00:00:00"
-
-        address = AddressRow(street_number, street_name, zip_code, city_state_id)
-        if address not in addresses:
-            addresses[address] = len(addresses) + 1
-        address_id = addresses[address]
 
         listing_id = len(listings) + 1
         listing = ListingRow(
