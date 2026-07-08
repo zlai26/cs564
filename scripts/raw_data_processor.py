@@ -15,8 +15,28 @@ from typing import Iterable
 
 
 ZIP_RE = re.compile(r",\s*(\d{3,5})(?:-\d{4})?\s*,\s*([A-Za-z]{2})")
-UNKNOWN_CITY_STATE = ("Unknown", "NA")
-UNKNOWN_ZIP = "00000"
+SYNTHETIC_STREET_NAMES = (
+    "Maple Avenue",
+    "Oak Street",
+    "Lakeview Drive",
+    "Pine Street",
+    "Cedar Lane",
+    "Washington Avenue",
+    "Park Road",
+    "Sunset Boulevard",
+    "Riverside Drive",
+    "Highland Avenue",
+    "Meadow Lane",
+    "Hillcrest Road",
+    "Lincoln Street",
+    "Willow Avenue",
+    "Cherry Lane",
+    "Forest Drive",
+    "Adams Street",
+    "Valley Road",
+    "Spring Street",
+    "Magnolia Avenue",
+)
 STREET_RE = re.compile(
     r"^\s*"
     r"([0-9]+[A-Za-z]?(?:[-/][0-9A-Za-z]+)?(?:\s+[0-9]+/[0-9]+)?)"
@@ -129,6 +149,14 @@ def split_street(address: str) -> tuple[str, str]:
     return " ".join(match.group(1).split()), match.group(2).strip()
 
 
+def synthetic_street(listing_id: int) -> tuple[str, str]:
+    address_space = 9999 * len(SYNTHETIC_STREET_NAMES)
+    slot = (listing_id * 7919) % address_space
+    street_number = str(slot % 9999 + 1)
+    street_name = f"{SYNTHETIC_STREET_NAMES[slot // 9999]} (S)"
+    return street_number, street_name
+
+
 def csv_reader(path: Path, delimiter: str = ",") -> Iterable[dict[str, str]]:
     csv.field_size_limit(sys.maxsize)
     with path.open(newline="", encoding="utf-8", errors="replace") as raw_file:
@@ -210,7 +238,7 @@ def write_csv(path: Path, headers: list[str], rows: Iterable[Iterable[object]]) 
 
 
 def build_city_state(raw_dir: Path) -> tuple[dict[tuple[str, str], int], list[tuple[int, str, str]]]:
-    pairs: set[tuple[str, str]] = {UNKNOWN_CITY_STATE}
+    pairs: set[tuple[str, str]] = set()
 
     for row in csv_reader(raw_dir / "uszips.csv"):
         city = clean(row.get("city"))
@@ -308,9 +336,7 @@ def build_listing_tables(
     list[tuple[int, int]],
     dict[str, int],
 ]:
-    unknown_city_state_id = city_state_ids[UNKNOWN_CITY_STATE]
-    unknown_address = AddressRow("0", "Unknown", UNKNOWN_ZIP, unknown_city_state_id)
-    addresses: OrderedDict[AddressRow, int] = OrderedDict([(unknown_address, 1)])
+    addresses: OrderedDict[AddressRow, int] = OrderedDict()
     listings: list[ListingRow] = []
     amenity_names: set[str] = set()
     listing_amenity_names: list[tuple[int, str]] = []
@@ -318,7 +344,7 @@ def build_listing_tables(
     stats = {
         "reused_previous_city_state": 0,
         "used_zip_from_uszips": 0,
-        "missing_address": 0,
+        "generated_address": 0,
         "defaulted_bedrooms": 0,
         "defaulted_price": 0,
     }
@@ -343,17 +369,18 @@ def build_listing_tables(
             stats["used_zip_from_uszips"] += 1
 
         raw_address = clean(row.get("address"))
-        address_id = addresses[unknown_address]
         if raw_address:
             street_number, street_name = split_street(raw_address)
             if not street_number:
                 street_number = "0"
-            address = AddressRow(street_number, street_name, zip_code, city_state_id)
-            if address not in addresses:
-                addresses[address] = len(addresses) + 1
-            address_id = addresses[address]
         else:
-            stats["missing_address"] += 1
+            street_number, street_name = synthetic_street(len(listings) + 1)
+            stats["generated_address"] += 1
+
+        address = AddressRow(street_number, street_name, zip_code, city_state_id)
+        if address not in addresses:
+            addresses[address] = len(addresses) + 1
+        address_id = addresses[address]
 
         title = clean(row.get("title"))
         if not title:

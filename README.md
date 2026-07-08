@@ -38,9 +38,12 @@ Processing notes:
 - Missing listing city/state values reuse the previous valid city/state.
 - Missing ZIP values use the first matching ZIP found in `uszips.csv` for that
   city/state.
-- Listings with missing addresses share one placeholder `Address` row with
-  street number `0`, street name `Unknown`, ZIP `00000`, and city/state
-  `Unknown, NA`.
+- Listings with missing raw addresses receive deterministic synthetic addresses:
+  realistic-looking street numbers and names are selected from a fixed,
+  reproducible address space. Synthetic street names end in `(S)` so they are
+  easy to identify. The inferred ZIP and city/state are retained.
+- Synthetic addresses are included to make the dataset more useful for learning
+  and demonstrating database design and queries. They are not real locations.
 - Missing numeric values that can cause MySQL import trouble are filled with `0`.
 - `ZipCodeDemographics` uses ZIP, population, latitude, and longitude from
   `uszips.csv`.
