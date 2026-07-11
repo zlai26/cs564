@@ -12,6 +12,9 @@ Run the processor with:
 python scripts/raw_data_processor.py
 ```
 
+On Windows PowerShell or Command Prompt, use `\` instead of `/` in file paths,
+for example `python scripts\raw_data_processor.py`.
+
 The default run shifts apartment listing times so the newest listing date becomes
 `2026-07-28`. This keeps the original relative ordering of listing times while
 making demo queries such as "listed in the last two weeks" useful. To choose a
@@ -53,6 +56,8 @@ Processing notes:
 Copy and paste the contents of `create_tables.sql` into the MySQL command line
 or MySQL Workbench before importing the CSV files.
 
+## Data Import
+
 Recommended MySQL import order:
 
 1. `CityState`
@@ -61,3 +66,20 @@ Recommended MySQL import order:
 4. `ApartmentListing`
 5. `Amenity`
 6. `ListingAmenity`
+
+To purge and load all six prepared tables automatically:
+
+```bash
+python scripts/import_mysql_data.py
+```
+
+On Windows PowerShell or Command Prompt, use:
+
+```bash
+python scripts\import_mysql_data.py
+```
+
+The importer deletes existing rows first in reverse dependency order, then
+inserts the CSV data in the recommended order above. It prompts for MySQL user,
+schema, and password. The schema defaults to `MYSQL_DATABASE` when set, otherwise
+`CS564`.

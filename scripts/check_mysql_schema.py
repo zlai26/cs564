@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke-test a connection to the local MySQL project schema."""
+"""Check tables, columns, and row counts in a local MySQL project schema."""
 
 from __future__ import annotations
 
@@ -30,9 +30,15 @@ def connect_with_pymysql(config: dict[str, object]):
     )
 
 
+def quote_identifier(identifier: str) -> str:
+    return f"`{identifier.replace('`', '``')}`"
+
+
 def main() -> int:
     default_user = env("MYSQL_USER", "root")
     user = input(f"MySQL user [{default_user}]: ").strip() or default_user
+    default_schema = env("MYSQL_DATABASE", "CS564")
+    schema = input(f"MySQL schema [{default_schema}]: ").strip() or default_schema
     password = os.environ.get("MYSQL_PASSWORD")
     if password is None:
         password = getpass("MySQL password: ")
@@ -42,7 +48,7 @@ def main() -> int:
         "port": int(env("MYSQL_PORT", "3306")),
         "user": user,
         "password": password,
-        "database": env("MYSQL_DATABASE", "CS564"),
+        "database": schema,
     }
 
     try:
@@ -83,8 +89,11 @@ def main() -> int:
             )
             tables = [table_row[0] for table_row in cursor.fetchall()]
 
-            table_schemas: list[tuple[str, list[tuple[str, str]]]] = []
+            table_schemas: list[tuple[str, int, list[tuple[str, str]]]] = []
             for table_name in tables:
+                cursor.execute(f"SELECT COUNT(*) FROM {quote_identifier(table_name)}")
+                record_count = cursor.fetchone()[0]
+
                 cursor.execute(
                     """
                     SELECT column_name, column_type
@@ -96,7 +105,7 @@ def main() -> int:
                     (table_name,),
                 )
                 columns = [(column_row[0], column_row[1]) for column_row in cursor.fetchall()]
-                table_schemas.append((table_name, columns))
+                table_schemas.append((table_name, record_count, columns))
 
         print(f"Connected to MySQL using {driver}")
         print(f"Schema: {row[0]}")
@@ -104,9 +113,9 @@ def main() -> int:
         if not table_schemas:
             print("No tables found in current schema.")
         else:
-            print("Table schemas:")
-            for table_name, columns in table_schemas:
-                print(f"  {table_name}")
+            print("Tables:")
+            for table_name, record_count, columns in table_schemas:
+                print(f"  {table_name} ({record_count} records)")
                 if not columns:
                     print("    (no columns found)")
                     continue
