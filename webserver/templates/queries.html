@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Queries - AptFinder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-mark">A</span>
+            <span>
+                <strong>AptFinder</strong>
+                <small>Find your next home</small>
+            </span>
+        </a>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('saved_page') }}">Saved</a>
+            <a class="active" href="{{ url_for('queries_page') }}">Queries</a>
+            <a href="{{ url_for('admin_page') }}">Administrator</a>
+        </nav>
+    </header>
+
+    <main class="detail-page">
+        <section class="detail-hero panel">
+            <div>
+                <h1>Checkpoint 3 SQL Queries</h1>
+                <p>These results are populated only when this page is opened.</p>
+            </div>
+            <div class="detail-price">
+                <strong>10</strong>
+                <small>SQL statements</small>
+            </div>
+        </section>
+
+        <section class="panel query-panel" id="queries">
+            <div class="panel-heading">
+                <h2>Query Results</h2>
+                <span>Schema: {{ db_config.database }}</span>
+            </div>
+            {% for query in queries %}
+                <details {% if loop.first %}open{% endif %}>
+                    <summary>{{ query.id|upper }}. {{ query.title }}</summary>
+                    <pre class="sql-block"><code>{{ query.sql.strip() }}</code></pre>
+                    {% if query.error %}
+                        <p class="query-error">{{ query.error }}</p>
+                    {% elif query.rows %}
+                        <div class="table-wrap mini-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        {% for column in query.rows[0].keys() %}
+                                            <th>{{ column }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in query.rows %}
+                                        <tr>
+                                            {% for value in row.values() %}
+                                                <td>{{ value }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>No rows returned.</p>
+                    {% endif %}
+                </details>
+            {% endfor %}
+        </section>
+    </main>
+</body>
+</html>

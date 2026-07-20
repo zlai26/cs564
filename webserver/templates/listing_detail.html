@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if listing %}{{ listing.title }}{% else %}Listing Detail{% endif %} - AptFinder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="{{ back_url }}" onclick="history.back(); return false;">
+            <span class="brand-mark">A</span>
+            <span>
+                <strong>AptFinder</strong>
+                <small>Find your next home</small>
+            </span>
+        </a>
+        <nav>
+            <a href="{{ back_url }}" onclick="history.back(); return false;">Back</a>
+            <a class="active" href="#details">Details</a>
+            <a href="{{ url_for('saved_page', user_name=selected_user.user_name) }}">Saved</a>
+            <a href="{{ url_for('queries_page') }}">Queries</a>
+            <a href="{{ url_for('admin_page') }}">Administrator</a>
+        </nav>
+    </header>
+
+    <main class="detail-page">
+        {% if request.args.get("message") %}
+            <div class="notice success">{{ request.args.get("message") }}</div>
+        {% endif %}
+        {% if request.args.get("error") %}
+            <div class="notice error">{{ request.args.get("error") }}</div>
+        {% endif %}
+        {% if errors %}
+            <div class="notice error">Database issue: {{ errors[0] }}</div>
+        {% endif %}
+
+        {% if listing %}
+            <section class="detail-hero panel" id="details">
+                <div>
+                    <a class="back-link" href="{{ back_url }}" onclick="history.back(); return false;">Back to results</a>
+                    <h1>{{ listing.title }}</h1>
+                    <p>
+                        {{ listing.street_number }} {{ listing.street_name }},
+                        {{ listing.city }}, {{ listing.state }} {{ listing.zip }}
+                    </p>
+                </div>
+                <div class="detail-price">
+                    <strong>${{ "{:,.0f}".format(listing.price or 0) }}</strong>
+                    <small>per month</small>
+                </div>
+            </section>
+
+            <section class="detail-grid">
+                <article class="panel fact-panel">
+                    <h2>Listing Facts</h2>
+                    <div class="fact-grid">
+                        <div><small>Bedrooms</small><strong>{{ listing.bedrooms }}</strong></div>
+                        <div><small>Bathrooms</small><strong>{{ listing.bathrooms }}</strong></div>
+                        <div><small>Size</small><strong>{{ listing.square_feet }} sq ft</strong></div>
+                        <div><small>ZIP Population</small><strong>{{ "{:,.0f}".format(listing.population or 0) }}</strong></div>
+                        <div><small>Latitude</small><strong>{{ listing.latitude }}</strong></div>
+                        <div><small>Longitude</small><strong>{{ listing.longitude }}</strong></div>
+                    </div>
+                </article>
+
+                <article class="panel detail-actions">
+                    <h2>{{ selected_user.user_name }}</h2>
+                    {% if listing.is_saved %}
+                        <form method="post" action="/remove-save">
+                            <input type="hidden" name="user_name" value="{{ selected_user.user_name }}">
+                            <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <button>Remove Saved Listing</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="/save">
+                            <input type="hidden" name="user_name" value="{{ selected_user.user_name }}">
+                            <input type="hidden" name="email" value="{{ selected_user.email }}">
+                            <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <button>Save Listing</button>
+                        </form>
+                    {% endif %}
+                </article>
+            </section>
+
+            <section class="panel detail-section">
+                <h2>Description</h2>
+                <p>{{ listing.description or "No description available." }}</p>
+            </section>
+
+            <section class="panel detail-section">
+                <h2>Amenities</h2>
+                {% set amenity_display = listing.amenities|amenity_icons(20) %}
+                <div class="detail-amenities">
+                    {% for amenity in amenity_display.visible %}
+                        <span class="detail-amenity">
+                            <span class="amenity-icon" title="{{ amenity.label }}">
+                                {% if amenity.filename %}
+                                    <img src="{{ url_for('static', filename='icons/' ~ amenity.filename) }}" alt="{{ amenity.label }}">
+                                {% else %}
+                                    {{ amenity.fallback_text }}
+                                {% endif %}
+                            </span>
+                            {{ amenity.label }}
+                        </span>
+                    {% else %}
+                        <span>No amenities listed.</span>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="detail-grid" id="reviews">
+                <form method="post" action="/review" class="panel action-card">
+                    <h2>Add or Update Review</h2>
+                    <input type="hidden" name="user_name" value="{{ selected_user.user_name }}">
+                    <input type="hidden" name="email" value="{{ selected_user.email }}">
+                    <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
+                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                    <input value="{{ selected_user.user_name }}" disabled>
+                    <fieldset class="star-rating">
+                        <legend>Rating</legend>
+                        <input type="radio" id="rating-5" name="rating" value="5" checked>
+                        <label for="rating-5" title="5 stars">&#9733;</label>
+                        <input type="radio" id="rating-4" name="rating" value="4">
+                        <label for="rating-4" title="4 stars">&#9733;</label>
+                        <input type="radio" id="rating-3" name="rating" value="3">
+                        <label for="rating-3" title="3 stars">&#9733;</label>
+                        <input type="radio" id="rating-2" name="rating" value="2">
+                        <label for="rating-2" title="2 stars">&#9733;</label>
+                        <input type="radio" id="rating-1" name="rating" value="1">
+                        <label for="rating-1" title="1 star">&#9733;</label>
+                    </fieldset>
+                    <textarea name="review_text" placeholder="Review"></textarea>
+                    <button>Submit Review</button>
+                </form>
+
+                <article class="panel review-list">
+                    <h2>Reviews</h2>
+                    {% for review in reviews %}
+                        <div class="review-item">
+                            <strong>{{ review.user_name }} - {{ review.rating }}/5</strong>
+                            <small>{{ review.review_time }}</small>
+                            <p>{{ review.review_text }}</p>
+                        </div>
+                    {% else %}
+                        <p>No reviews yet.</p>
+                    {% endfor %}
+                </article>
+            </section>
+        {% else %}
+            <section class="panel detail-section">
+                <h1>Listing not found</h1>
+                <p>The selected listing could not be loaded.</p>
+                <a class="page-button" href="{{ back_url }}">Back</a>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

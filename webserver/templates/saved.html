@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Saved Listings - AptFinder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('index', user_name=selected_user.user_name) }}">
+            <span class="brand-mark">A</span>
+            <span>
+                <strong>AptFinder</strong>
+                <small>Find your next home</small>
+            </span>
+        </a>
+        <nav>
+            <a href="{{ url_for('index', user_name=selected_user.user_name) }}">Home</a>
+            <a class="active" href="{{ url_for('saved_page', user_name=selected_user.user_name) }}">Saved</a>
+            <a href="{{ url_for('queries_page') }}">Queries</a>
+            <a href="{{ url_for('admin_page') }}">Administrator</a>
+        </nav>
+    </header>
+
+    <main class="detail-page">
+        {% if message %}
+            <div class="notice success">{{ message }}</div>
+        {% endif %}
+        {% if action_error %}
+            <div class="notice error">{{ action_error }}</div>
+        {% endif %}
+        {% if errors %}
+            <div class="notice error">Database issue: {{ errors[0] }}</div>
+        {% endif %}
+
+        <section class="detail-hero panel">
+            <div>
+                <h1>Saved Listings</h1>
+                <p>{{ selected_user.user_name }} has {{ saved_rows|length }} saved listing(s).</p>
+            </div>
+            <form method="get" class="saved-user-form">
+                <label>
+                    <span>User</span>
+                    <select name="user_name" onchange="this.form.submit()">
+                        {% for user in user_options %}
+                            <option
+                                value="{{ user.user_name }}"
+                                {% if user.user_name == selected_user.user_name %}selected{% endif %}
+                            >
+                                {{ user.user_name }}
+                            </option>
+                        {% else %}
+                            <option value="{{ selected_user.user_name }}">{{ selected_user.user_name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </form>
+        </section>
+
+        <section class="panel listings-panel">
+            <div class="panel-heading">
+                <h2>Saved Apartments</h2>
+                <span>Schema: {{ db_config.database }}</span>
+            </div>
+            <div class="table-wrap">
+                <table id="listing-table">
+                    <thead>
+                        <tr>
+                            <th><button type="button" class="sort-button" data-sort="listing_id">ID</button></th>
+                            <th>Title</th>
+                            <th>Location</th>
+                            <th><button type="button" class="sort-button" data-sort="bedrooms">Beds</button></th>
+                            <th><button type="button" class="sort-button" data-sort="bathrooms">Baths</button></th>
+                            <th><button type="button" class="sort-button" data-sort="square_feet">Size</button></th>
+                            <th><button type="button" class="sort-button" data-sort="price">Price</button></th>
+                            <th>Saved At</th>
+                            <th>Amenities</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in displayed_rows %}
+                            <tr
+                                data-listing_id="{{ listing.listing_id or 0 }}"
+                                data-bedrooms="{{ listing.bedrooms or 0 }}"
+                                data-bathrooms="{{ listing.bathrooms or 0 }}"
+                                data-square_feet="{{ listing.square_feet or 0 }}"
+                                data-price="{{ listing.price or 0 }}"
+                            >
+                                <td>{{ listing.listing_id }}</td>
+                                <td>
+                                    <a
+                                        class="listing-link"
+                                        href="{{ url_for('listing_detail', listing_id=listing.listing_id, user_name=selected_user.user_name, back=request.full_path) }}"
+                                    >
+                                        {{ listing.title }}
+                                    </a>
+                                </td>
+                                <td>{{ listing.city }}, {{ listing.state }}<small>{{ listing.zip }}</small></td>
+                                <td>{{ listing.bedrooms }}</td>
+                                <td>{{ listing.bathrooms }}</td>
+                                <td>{{ listing.square_feet }} sq ft</td>
+                                <td class="price">${{ "{:,.0f}".format(listing.price or 0) }}</td>
+                                <td>{{ listing.saved_at }}</td>
+                                <td>
+                                    {% set amenity_display = listing.amenities|amenity_icons %}
+                                    <div class="amenity-icons">
+                                        {% for amenity in amenity_display.visible %}
+                                            <span class="amenity-icon" title="{{ amenity.label }}">
+                                                {% if amenity.filename %}
+                                                    <img src="{{ url_for('static', filename='icons/' ~ amenity.filename) }}" alt="{{ amenity.label }}">
+                                                {% else %}
+                                                    {{ amenity.fallback_text }}
+                                                {% endif %}
+                                            </span>
+                                        {% endfor %}
+                                        {% if amenity_display.extra %}
+                                            <span class="amenity-more">+{{ amenity_display.extra }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="9">No saved listings to show.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                {% if prev_page_url %}
+                    <a class="page-button" href="{{ prev_page_url }}">Prev</a>
+                {% else %}
+                    <span class="page-button disabled">Prev</span>
+                {% endif %}
+                <span class="page-count">{{ page }}/{{ page_count }}</span>
+                {% if next_page_url %}
+                    <a class="page-button" href="{{ next_page_url }}">Next</a>
+                {% else %}
+                    <span class="page-button disabled">Next</span>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const sortState = {};
+        const numericColumns = new Set(["listing_id", "bedrooms", "bathrooms", "square_feet", "price"]);
+
+        document.querySelectorAll(".sort-button").forEach((button) => {
+            button.addEventListener("click", () => {
+                const key = button.dataset.sort;
+                const tbody = document.querySelector("#listing-table tbody");
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+                const direction = sortState[key] === "asc" ? "desc" : "asc";
+
+                rows.sort((a, b) => {
+                    const aValue = a.dataset[key] || "";
+                    const bValue = b.dataset[key] || "";
+                    const comparison = numericColumns.has(key)
+                        ? Number(aValue) - Number(bValue)
+                        : aValue.localeCompare(bValue);
+                    return direction === "asc" ? comparison : -comparison;
+                });
+
+                rows.forEach((row) => tbody.appendChild(row));
+                sortState[key] = direction;
+                document.querySelectorAll(".sort-button").forEach((item) => {
+                    item.removeAttribute("data-direction");
+                });
+                button.dataset.direction = direction;
+            });
+        });
+    </script>
+</body>
+</html>

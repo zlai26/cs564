@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AptFinder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/">
+            <span class="brand-mark">A</span>
+            <span>
+                <strong>AptFinder</strong>
+                <small>Find your next home</small>
+            </span>
+        </a>
+        <nav>
+            <a class="active" href="#home">Home</a>
+            <a href="{{ url_for('saved_page', user_name=selected_user.user_name) }}">Saved</a>
+            <a href="{{ url_for('queries_page') }}">Queries</a>
+            <a href="{{ url_for('admin_page') }}">Administrator</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" id="home">
+            <div>
+                <h1>Find the perfect apartment.</h1>
+                <p>Search listings with details about prices, amenities, reviews, and neighborhood data.</p>
+            </div>
+            <div class="hero-banner" aria-hidden="true">
+                <img src="{{ url_for('static', filename='images/home-banner.png') }}" alt="">
+            </div>
+        </section>
+
+        <section class="search-band" id="browse">
+            <form method="get" class="search-form">
+                <label>
+                    <span>User</span>
+                    <select name="user_name" onchange="this.form.submit()">
+                        {% for user in user_options %}
+                            <option
+                                value="{{ user.user_name }}"
+                                {% if user.user_name == selected_user.user_name %}selected{% endif %}
+                            >
+                                {{ user.user_name }}
+                            </option>
+                        {% else %}
+                            <option value="{{ selected_user.user_name }}">{{ selected_user.user_name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>City</span>
+                    <input name="city" placeholder="City" value="{{ search_values.city }}">
+                </label>
+                <label>
+                    <span>State</span>
+                    <input name="state" placeholder="State" maxlength="2" value="{{ search_values.state }}">
+                </label>
+                <label>
+                    <span>Min Price</span>
+                    <input name="min_price" type="number" placeholder="Min Price" value="{{ search_values.min_price }}">
+                </label>
+                <label>
+                    <span>Max Price</span>
+                    <input name="max_price" type="number" placeholder="Max Price" value="{{ search_values.max_price }}">
+                </label>
+                <label>
+                    <span>Bedrooms</span>
+                    <input name="bedrooms" type="number" placeholder="Bedrooms" value="{{ search_values.bedrooms }}">
+                </label>
+                <label>
+                    <span>Restrooms</span>
+                    <input name="bathrooms" type="number" step="0.5" placeholder="Restrooms" value="{{ search_values.bathrooms }}">
+                </label>
+                <label>
+                    <span>Amenities</span>
+                    <details class="multi-select">
+                        <summary>
+                            {% if search_values.amenities %}
+                                {{ search_values.amenities|length }} selected
+                            {% else %}
+                                Any amenity
+                            {% endif %}
+                        </summary>
+                        <div class="multi-select-menu">
+                            {% for amenity in amenity_options %}
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="amenities"
+                                        value="{{ amenity }}"
+                                        {% if amenity in search_values.amenities %}checked{% endif %}
+                                    >
+                                    <span>{{ amenity }}</span>
+                                </label>
+                            {% else %}
+                                <p>No amenities loaded.</p>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </label>
+                <button type="submit">Search</button>
+            </form>
+        </section>
+
+        {% if message %}
+            <div class="notice success">{{ message }}</div>
+        {% endif %}
+        {% if action_error %}
+            <div class="notice error">{{ action_error }}</div>
+        {% endif %}
+        {% if dashboard.errors %}
+            <div class="notice error">
+                Database issue: {{ dashboard.errors[0] }}
+            </div>
+        {% endif %}
+
+        <section class="feature-row">
+            <article><span class="icon">B</span><strong>{{ current_summary.listing_count }}</strong><small>Matching listings</small></article>
+            <article><span class="icon">V</span><strong>{{ current_summary.review_count }}</strong><small>Reviews in results</small></article>
+            <article><span class="icon">P</span><strong>${{ "{:,.0f}".format(current_summary.avg_price or 0) }}</strong><small>Average result rent</small></article>
+            <article><span class="icon">Z</span><strong>{{ current_summary.zip_count }}</strong><small>ZIPs in results</small></article>
+        </section>
+
+        <div class="content-grid">
+            <section class="panel listings-panel">
+                <div class="panel-heading">
+                    <h2>Search Results</h2>
+                    <span>Schema: {{ db_config.database }}</span>
+                </div>
+                <div class="table-wrap">
+                    <table id="listing-table">
+                        <thead>
+                            <tr>
+                                <th><button type="button" class="sort-button" data-sort="listing_id">ID</button></th>
+                                <th>Title</th>
+                                <th>Location</th>
+                                <th><button type="button" class="sort-button" data-sort="bedrooms">Beds</button></th>
+                                <th><button type="button" class="sort-button" data-sort="bathrooms">Baths</button></th>
+                                <th><button type="button" class="sort-button" data-sort="square_feet">Size</button></th>
+                                <th><button type="button" class="sort-button" data-sort="price">Price</button></th>
+                                {% if search_values.zip_code %}
+                                    <th><button type="button" class="sort-button" data-sort="distance_miles">Miles</button></th>
+                                {% endif %}
+                                <th>Amenities</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for listing in displayed_rows %}
+                                <tr
+                                    data-listing_id="{{ listing.listing_id or 0 }}"
+                                    data-bedrooms="{{ listing.bedrooms or 0 }}"
+                                    data-bathrooms="{{ listing.bathrooms or 0 }}"
+                                    data-square_feet="{{ listing.square_feet or 0 }}"
+                                    data-price="{{ listing.price or 0 }}"
+                                    data-distance_miles="{{ listing.distance_miles or 0 }}"
+                                >
+                                    <td>{{ listing.listing_id }}</td>
+                                    <td>
+                                        <a
+                                            class="listing-link"
+                                            href="{{ url_for('listing_detail', listing_id=listing.listing_id, user_name=selected_user.user_name, back=request.full_path) }}"
+                                        >
+                                            {{ listing.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ listing.city }}, {{ listing.state }}<small>{{ listing.zip }}</small></td>
+                                    <td>{{ listing.bedrooms }}</td>
+                                    <td>{{ listing.bathrooms }}</td>
+                                    <td>{{ listing.square_feet }} sq ft</td>
+                                    <td class="price">${{ "{:,.0f}".format(listing.price or 0) }}</td>
+                                    {% if search_values.zip_code %}
+                                        <td>{{ listing.distance_miles }} mi</td>
+                                    {% endif %}
+                                    <td>
+                                        {% set amenity_display = listing.amenities|amenity_icons %}
+                                        <div class="amenity-icons">
+                                            {% for amenity in amenity_display.visible %}
+                                                <span class="amenity-icon" title="{{ amenity.label }}">
+                                                    {% if amenity.filename %}
+                                                        <img
+                                                            src="{{ url_for('static', filename='icons/' ~ amenity.filename) }}"
+                                                            alt="{{ amenity.label }}"
+                                                        >
+                                                    {% else %}
+                                                        {{ amenity.fallback_text }}
+                                                    {% endif %}
+                                                </span>
+                                            {% endfor %}
+                                            {% if amenity_display.extra %}
+                                                <span class="amenity-more">+{{ amenity_display.extra }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="{% if search_values.zip_code %}9{% else %}8{% endif %}">No listings to show.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    {% if prev_page_url %}
+                        <a class="page-button" href="{{ prev_page_url }}">Prev</a>
+                    {% else %}
+                        <span class="page-button disabled">Prev</span>
+                    {% endif %}
+                    <span class="page-count">{{ page }}/{{ page_count }}</span>
+                    {% if next_page_url %}
+                        <a class="page-button" href="{{ next_page_url }}">Next</a>
+                    {% else %}
+                        <span class="page-button disabled">Next</span>
+                    {% endif %}
+                </div>
+            </section>
+
+            <aside class="side-stack">
+                <section class="panel zip-search-card">
+                    <h2>Search by ZIP</h2>
+                    <form method="get" class="zip-search-form">
+                        <input type="hidden" name="user_name" value="{{ selected_user.user_name }}">
+                        <input type="hidden" name="min_price" value="{{ search_values.min_price }}">
+                        <input type="hidden" name="max_price" value="{{ search_values.max_price }}">
+                        <input type="hidden" name="bedrooms" value="{{ search_values.bedrooms }}">
+                        <input type="hidden" name="bathrooms" value="{{ search_values.bathrooms }}">
+                        {% for amenity in search_values.amenities %}
+                            <input type="hidden" name="amenities" value="{{ amenity }}">
+                        {% endfor %}
+                        <label>
+                            <span>ZIP Code</span>
+                            <input name="zip_code" placeholder="27607" value="{{ search_values.zip_code }}">
+                        </label>
+                        <label>
+                            <span>Mileage Range</span>
+                            <input name="miles" type="number" min="1" step="1" placeholder="10" value="{{ search_values.miles }}">
+                        </label>
+                        <button type="submit">Search Radius</button>
+                    </form>
+                </section>
+
+                <section class="panel insights">
+                    <h2>Neighborhood Insights</h2>
+                    <div class="metric-grid">
+                        <article><small>Average Population</small><strong>{{ "{:,.0f}".format(current_summary.avg_population or 0) }}</strong></article>
+                        <article><small>Min Rent</small><strong>${{ "{:,.0f}".format(current_summary.min_price or 0) }}</strong></article>
+                        <article><small>Max Rent</small><strong>${{ "{:,.0f}".format(current_summary.max_price or 0) }}</strong></article>
+                    </div>
+                </section>
+            </aside>
+        </div>
+
+    </main>
+    <script>
+        const sortState = {};
+        const numericColumns = new Set(["listing_id", "bedrooms", "bathrooms", "square_feet", "price", "distance_miles"]);
+
+        document.querySelectorAll(".sort-button").forEach((button) => {
+            button.addEventListener("click", () => {
+                const key = button.dataset.sort;
+                const tbody = document.querySelector("#listing-table tbody");
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+                const direction = sortState[key] === "asc" ? "desc" : "asc";
+
+                rows.sort((a, b) => {
+                    const aValue = a.dataset[key] || "";
+                    const bValue = b.dataset[key] || "";
+                    const comparison = numericColumns.has(key)
+                        ? Number(aValue) - Number(bValue)
+                        : aValue.localeCompare(bValue);
+                    return direction === "asc" ? comparison : -comparison;
+                });
+
+                rows.forEach((row) => tbody.appendChild(row));
+                sortState[key] = direction;
+                document.querySelectorAll(".sort-button").forEach((item) => {
+                    item.removeAttribute("data-direction");
+                });
+                button.dataset.direction = direction;
+            });
+        });
+    </script>
+</body>
+</html>
