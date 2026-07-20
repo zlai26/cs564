@@ -84,6 +84,7 @@ CREATE TABLE Review (
 CREATE TABLE SavedListing (
     user_name VARCHAR(100) NOT NULL,
     listing_id INT NOT NULL,
+    saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_name, listing_id),
     FOREIGN KEY (user_name) REFERENCES AppUser(user_name),
     FOREIGN KEY (listing_id) REFERENCES ApartmentListing(listing_id)
