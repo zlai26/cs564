@@ -83,3 +83,18 @@ The importer deletes existing rows first in reverse dependency order, then
 inserts the CSV data in the recommended order above. It prompts for MySQL user,
 schema, and password. The schema defaults to `MYSQL_DATABASE` when set, otherwise
 `CS564`.
+
+## SQL Folder
+
+The `sql/` folder contains checkpoint 3 SQL scripts for building, testing, and
+demonstrating the database:
+
+- `checkpoint3_create_tables_reference.sql` defines the reference table schema.
+- `checkpoint3_app_tables_and_seed.sql` creates and seeds supporting
+  application tables.
+- `checkpoint3_sql_queries.sql` contains example analytical and application
+  queries.
+- `checkpoint3_stored_procedures.sql` defines stored procedures for common
+  database operations.
+- `checkpoint3_baseline_performance.sql` records baseline query performance
+  checks.
