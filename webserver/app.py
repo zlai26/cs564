@@ -316,6 +316,7 @@ def prompt(value_name: str, default: str, secret: bool = False) -> str:
 
 
 def configure_database() -> None:
+    print("Enter MySQL database connection information. Press Enter to use defaults.")
     DB_CONFIG.update(
         host=os.environ.get("MYSQL_HOST", "localhost"),
         database=os.environ.get("MYSQL_DATABASE") or prompt("Schema", "cs564"),
