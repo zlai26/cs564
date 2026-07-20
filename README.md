@@ -98,3 +98,35 @@ demonstrating the database:
   database operations.
 - `checkpoint3_baseline_performance.sql` records baseline query performance
   checks.
+
+## User Interface
+
+The `webserver/` folder contains a Flask apartment-search web app. Install the
+Python dependencies first:
+
+```bash
+pip install -r requirements.txt
+```
+
+Before starting the server, make sure the base tables, imported data, app demo
+tables, and stored procedures have been loaded into MySQL:
+
+```bash
+mysql -u root -p cs564 < sql/create_tables.sql
+python scripts/import_mysql_data.py
+mysql -u root -p cs564 < sql/checkpoint3_app_tables_and_seed.sql
+mysql -u root -p cs564 < sql/checkpoint3_stored_procedures.sql
+```
+
+Start the web server with:
+
+```bash
+python webserver/app.py
+```
+
+On startup, the server prompts for MySQL database connection information. The
+schema defaults to `cs564` and the user defaults to `root`. By default, open:
+
+```text
+http://127.0.0.1:8000
+```
