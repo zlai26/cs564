@@ -1,5 +1,9 @@
 # COMPSCI 564 Project
 
+## ER Diagram
+
+![ER diagram](ER.png)
+
 ## Data Preparation
 
 Raw data is stored in `data/raw/` and processed by
