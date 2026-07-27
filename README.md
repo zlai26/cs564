@@ -98,6 +98,20 @@ demonstrating the database:
   database operations.
 - `checkpoint3_baseline_performance.sql` records baseline query performance
   checks.
+- `checkpoint4_indexes.sql` creates the performance indexes used for the
+  indexing checkpoint.
+
+## Checkpoint 4 Indexes
+
+Run `checkpoint4_indexes.sql` only after recording the baseline performance
+from `checkpoint3_baseline_performance.sql`. The file adds secondary indexes
+for the selected checkpoint queries, including composite indexes for amenity
+lookups, listing search filters, price-based scans, and repeated listing
+lookups.
+
+```bash
+mysql -u root -p cs564 < sql/checkpoint4_indexes.sql
+```
 
 ## User Interface
 
